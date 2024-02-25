@@ -10,18 +10,6 @@ css = """
     .rtl
     {
         text-align: right;
-        dir: rtl;
-    }
-    #component-19
-    {
-        text-align: right;
-        flex-direction: row-reverse; /* Makes the main-axis start from the right /
-        justify-content: flex-start; / Aligns children to the right */
-    }
-    #component-17
-    {
-    text-align: right;
-    float: right;
     }
     """
 
@@ -77,11 +65,12 @@ def reload_components():
     questions = get_questions_and_answers()
     radios = []
     for question, answers in questions[0:1]:
-        question_md = gr.Markdown(rtl=True, value= question)
+        question_md = gr.Markdown(rtl=True, value= f'<b>{question}</b>')
                     
         answers_text = [answer for answer, _ in answers]
         for i in range(0, 3):
-            radios.append(gr.Radio(elem_classes = 'rtl', choices = ['متوافق', 'متوافق جزئياً', 'غير متوافق'], value = 'غير متوافق', label = answers_text[i]))            
+            radios.append(gr.Markdown(rtl = True, value= answers_text[i]))
+            radios.append(gr.Radio(elem_classes = 'rtl', choices = ['متوافق', 'متوافق جزئياً', 'غير متوافق'], value = 'غير متوافق', label = ""))            
 
     return [question_md] + radios
 
