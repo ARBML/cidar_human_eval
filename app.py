@@ -11,6 +11,9 @@ css = """
     {
         text-align: right;
     }
+    .svelte-1kzox3m{
+    justify-content: end;
+    }
     """
 
 file_path = 'instructions/merged.json'
@@ -93,7 +96,8 @@ def rank_interface():
         return "سجلنا ردك، ما قصرت =)"
         
     # Create three dropdowns for each question for 1st, 2nd, and 3rd choices
-    with gr.Blocks() as demo:
+    inputs = []
+    with gr.Blocks(css=css) as demo:
         with gr.Row():
             with gr.Column():
                 outptus= reload_components()
