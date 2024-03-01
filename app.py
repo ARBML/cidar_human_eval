@@ -10,18 +10,6 @@ css = """
     .rtl
     {
         text-align: right;
-        dir: rtl;
-    }
-    #component-19
-    {
-        text-align: right;
-        flex-direction: row-reverse; /* Makes the main-axis start from the right /
-        justify-content: flex-start; / Aligns children to the right */
-    }
-    #component-17
-    {
-    text-align: right;
-    float: right;
     }
     .svelte-1kzox3m{
     justify-content: end;
@@ -76,50 +64,61 @@ def get_questions_and_answers():
 
     return questions_and_answers
 
+def reload_components():
+    questions = get_questions_and_answers()
+    radios = []
+    for question, answers in questions[0:1]:
+        question_md = gr.Markdown(rtl=True, value= f'<b>{question}</b>')
+                    
+        answers_text = [answer for answer, _ in answers]
+        for i in range(0, 3):
+            radios.append(gr.Markdown(rtl = True, value= answers_text[i]))
+            radios.append(gr.Radio(elem_classes = 'rtl', choices = ['متوافق', 'متوافق جزئياً', 'غير متوافق'], value = 'غير متوافق', label = ""))            
+
+    return [question_md] + radios
 
 def rank_interface():
     def rank_fluency(*radio_selections):
-            user_rankings = []
-            
-            for i in range(0, len(radio_selections), 4):  # Process each set of 3 dropdowns for a question
-                selections = radio_selections[i+1:i+4]
-                question_index = i // 4
-                _, model_answers = questions[question_index]
-                print(model_answers)
-                for j, chosen_answer in enumerate(selections):
-                    if chosen_answer == 'غير متوافق':
-                        user_rankings.append((model_answers[j][1], 3))  # j is the rank (1, 2, or 3)
-                    elif chosen_answer == 'متوافق جزئياً':
-                        user_rankings.append((model_answers[j][1], 2))
-                    elif chosen_answer == 'متوافق':
-                        user_rankings.append((model_answers[j][1], 1))
-            process_rankings(user_rankings)
-            return "سجلنا ردك، ما قصرت =)"
-    
-    questions = get_questions_and_answers()
-    
+        user_rankings = []
+        
+        for i in range(0, len(radio_selections), 3):  # Process each set of 3 dropdowns for a question
+            selections = radio_selections[i:i+3]
+            question_index = i // 3
+            _, model_answers = questions[question_index]
+            for j, chosen_answer in enumerate(selections):
+                if chosen_answer == 'غير متوافق':
+                    user_rankings.append((model_answers[j][1], 3))  # j is the rank (1, 2, or 3)
+                elif chosen_answer == 'متوافق جزئياً':
+                    user_rankings.append((model_answers[j][1], 2))
+                elif chosen_answer == 'متوافق':
+                    user_rankings.append((model_answers[j][1], 1))
+        process_rankings(user_rankings)
+        return "سجلنا ردك، ما قصرت =)"
+        
     # Create three dropdowns for each question for 1st, 2nd, and 3rd choices
     inputs = []
     with gr.Blocks(css=css) as demo:
         with gr.Row():
             with gr.Column():
-                for question, answers in questions[0:2]:
-                    inputs.append(gr.Markdown(rtl=True, value= question))
-                    
-                    answers_text = [answer for answer, _ in answers]
-                    for i in range(0, 3):
-                        inputs.append(gr.Radio(elem_classes = 'rtl', choices = ['متوافق', 'متوافق جزئياً', 'غير متوافق'], value = 'غير متوافق', label = answers_text[i]))
-                        # inputs.append(gr.Markdown(answers_text[i]))
-            
-                outputs = gr.Markdown("", rtl = True)
+                outptus= reload_components()
+                out_text = gr.Markdown("", rtl = True)
 
                 gr.Button("Submit").click(
                     fn=rank_fluency,
-                    inputs=inputs,
-                    outputs=outputs
+                    inputs=outptus[1:],
+                    outputs=out_text
+                ).then(
+                    fn=reload_components,
+                    outputs = outptus
+                )
+
+                gr.Button("Skip").click(
+                    fn=reload_components,
+                    outputs=outptus
                 )
            
     return demo
 
+questions = get_questions_and_answers()
 iface = rank_interface()
 iface.launch(share = True)
