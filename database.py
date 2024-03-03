@@ -26,8 +26,17 @@ def read_responses(filter_query=None):
     try:
         if filter_query is None:
             filter_query = {}  # An empty query will return all documents
-        responses = collection.find(filter_query)
-        return list(responses)  # Convert cursor to list
+
+        ranks = {
+            'CIDAR': [0, 0, 0],
+            'ALPAGASUS': [0, 0, 0],
+            'CHAT': [0, 0, 0],
+        }
+
+        for doc in collection.find(filter_query):
+            for model in ranks:
+                ranks[model][doc[model] - 1] += 1
+        return ranks
     except Exception as e:
         print(f"An error occurred: {e}")
         return []

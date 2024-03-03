@@ -1,6 +1,6 @@
 import os
 from collections import defaultdict
-from database import save_response
+from database import save_response, read_responses
 import gradio as gr
 import pandas as pd
 import random
@@ -42,7 +42,7 @@ df = pd.read_json(file_path, orient='records', lines=False)
 # that keeps track of how many times each question has been used
 question_count = {index: 0 for index in df.index}
 model_rankings = defaultdict(lambda: {'1st': 0, '2nd': 0, '3rd': 0})
-
+curr_order = ['CIDAR', 'CHAT', 'ALPAGASUS']
 
 def get_rank_suffix(rank):
     if 11 <= rank <= 13:
@@ -54,68 +54,53 @@ def get_rank_suffix(rank):
 
 def process_rankings(user_rankings):
     print("Processing Rankings:", user_rankings)  # Debugging print
-    for answer_id, rank in user_rankings:
-        model = answer_id.split('_')[0]  # Extracting the model name from the answer_id
-        rank_suffix = get_rank_suffix(rank)
-        model_rankings[model][f'{rank}{rank_suffix}'] += 1  # Using the correct suffix based on the rank
-        model_rankings_dict = dict(model_rankings)
-
-    save_response(model_rankings_dict)
-    print("Updated Model Rankings:", model_rankings)  # Debugging print
+    save_response(user_rankings)
+    print(read_responses())
     return
 
 
 def get_questions_and_answers():
     available_questions = [index for index, count in question_count.items() if count < 3]
-    selected_indexes = random.sample(available_questions, min(4, len(available_questions)))
-    for index in selected_indexes:
-        question_count[index] += 1
+    index  = random.sample(available_questions, min(1, len(available_questions)))[0]
+    question_count[index] += 1
 
-    questions_and_answers = []
-    for index in selected_indexes:
-        question = df.loc[index, 'instruction']
-        answers_with_models = [
-            (df.loc[index, 'cidar_output'], 'CIDAR'),
-            (df.loc[index, 'chat_output'], 'CHAT'),
-            (df.loc[index, 'alpagasus_output'], 'ALPAGASUS')
-        ]
-        random.shuffle(answers_with_models)  # Shuffle answers with their IDs
-        questions_and_answers.append((question, answers_with_models))
-
-    return questions_and_answers
+    question = df.loc[index, 'instruction']
+    answers_with_models = [
+        (df.loc[index, 'cidar_output'], 'CIDAR'),
+        (df.loc[index, 'chat_output'], 'CHAT'),
+        (df.loc[index, 'alpagasus_output'], 'ALPAGASUS')
+    ]
+    random.shuffle(answers_with_models)  # Shuffle answers with their IDs
+    curr_order = [model for _, model in answers_with_models]
+    return (question, answers_with_models)
 
 def reload_components():
-    questions = get_questions_and_answers()
+    question, answers = get_questions_and_answers()
     user_instructions_txt = " في الصفحة التالية ستجد طلب له ثلاث إجابات مختلفة. من فضلك اختر مدي توافق كل إجابة مع الثقافة العربية."
     radios = []
-    for question, answers in questions[0:1]:
-        user_instructions = gr.Markdown(rtl=True, value= f'<h1 class="usr-inst">{user_instructions_txt}</h1>')
+    user_instructions = gr.Markdown(rtl=True, value= f'<h1 class="usr-inst">{user_instructions_txt}</h1>')
 
-        question_md = gr.Markdown(rtl=True, value= f'<b> {question} </b>')
-                    
-        answers_text = [answer for answer, _ in answers]
-        for i in range(0, 3):
-            radios.append(gr.Markdown(rtl = True, value= answers_text[i]))
-            radios.append(gr.Radio(elem_classes = 'rtl', choices = ['متوافق', 'متوافق جزئياً', 'غير متوافق'], value = 'غير متوافق', label = ""))            
-            # radios.append(gr.Markdown(rtl = True, value= f'<b> <hr> </b>'))
-
+    question_md = gr.Markdown(rtl=True, value= f'<b> {question} </b>')
+                
+    for answer, model in answers:
+        radios.append(gr.Markdown(rtl = True, value= answer))
+        radios.append(gr.Radio(elem_classes = 'rtl', choices = ['متوافق', 'متوافق جزئياً', 'غير متوافق'], value = 'غير متوافق', label = ""))            
+    
     return [user_instructions, question_md] + radios
 
 def rank_interface():
     def rank_fluency(*radio_selections):
-        user_rankings = []
-        
+        user_rankings = {}
         for i in range(0, len(radio_selections), 3):  # Process each set of 3 dropdowns for a question
             selections = radio_selections[i:i+3]
-            question_index = i // 3
-            _, model_answers = questions[question_index]
             for j, chosen_answer in enumerate(selections):
+                model_name = curr_order[j]
                 if chosen_answer == 'غير متوافق':
-                    user_rankings.append((model_answers[j][1], 3))  # j is the rank (1, 2, or 3)
+                    user_rankings[model_name] =  3 
                 elif chosen_answer == 'متوافق جزئياً':
-                    user_rankings.append((model_answers[j][1], 2))
+                    user_rankings[model_name] =  2
                 elif chosen_answer == 'متوافق':
-                    user_rankings.append((model_answers[j][1], 1))
+                    user_rankings[model_name] =  1
         process_rankings(user_rankings)
         return "سجلنا ردك، ما قصرت =)"
         
