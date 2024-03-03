@@ -11,9 +11,30 @@ css = """
     {
         text-align: right;
     }
+    .usr-inst{
+    text-align:center;
+    background-color: #3e517e;
+    border: solid 1px;
+    border-radius: 5px;
+    padding: 10px;
+    }
     .svelte-1kzox3m{
     justify-content: end;
     }
+    .svelte-sfqy0y{
+    border:none; 
+    }
+    .svelte-90oupt{
+    background-color: #0b0f19;
+    padding-top: 0px;
+    }
+    #component-4{
+    border: 1px solid;
+    padding: 5px;
+    background-color: #242433;
+    border-radius: 5px;
+    }
+    
     """
 
 file_path = 'instructions/merged.json'
@@ -66,16 +87,20 @@ def get_questions_and_answers():
 
 def reload_components():
     questions = get_questions_and_answers()
+    user_instructions_txt = " في الصفحة التالية ستجد طلب له ثلاث إجابات مختلفة. من فضلك اختر مدي توافق كل إجابة مع الثقافة العربية."
     radios = []
     for question, answers in questions[0:1]:
-        question_md = gr.Markdown(rtl=True, value= f'<b>{question}</b>')
+        user_instructions = gr.Markdown(rtl=True, value= f'<h1 class="usr-inst">{user_instructions_txt}</h1>')
+
+        question_md = gr.Markdown(rtl=True, value= f'<b> {question} </b>')
                     
         answers_text = [answer for answer, _ in answers]
         for i in range(0, 3):
             radios.append(gr.Markdown(rtl = True, value= answers_text[i]))
             radios.append(gr.Radio(elem_classes = 'rtl', choices = ['متوافق', 'متوافق جزئياً', 'غير متوافق'], value = 'غير متوافق', label = ""))            
+            # radios.append(gr.Markdown(rtl = True, value= f'<b> <hr> </b>'))
 
-    return [question_md] + radios
+    return [user_instructions, question_md] + radios
 
 def rank_interface():
     def rank_fluency(*radio_selections):
