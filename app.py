@@ -1,5 +1,4 @@
 import os
-os.system("pip install pymongo")
 from collections import defaultdict
 from database import save_response
 import gradio as gr
